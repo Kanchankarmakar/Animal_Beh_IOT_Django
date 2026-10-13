@@ -1,0 +1,278 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="refresh" content="15">
+
+    <title>{{ animal.name }} | Animal Monitoring</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body { background: #f4f7fb; }
+        .navbar { background: #152238; }
+        .panel { border: 0; border-radius: 14px; }
+        .chart-container { position: relative; height: 280px; }
+    </style>
+</head>
+
+<body>
+<nav class="navbar navbar-dark px-3 px-md-4 py-3">
+    <a class="navbar-brand fw-bold" href="/">
+        Animal Behaviour Monitoring
+    </a>
+    <a href="{% url 'animal_list' %}"
+       class="btn btn-outline-light btn-sm">
+        All Animals
+    </a>
+</nav>
+
+<main class="container-fluid px-3 px-md-4 py-4">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">{{ animal.name }}</h1>
+            <p class="text-secondary mb-0">
+                {{ animal.species }}
+                {% if animal.breed %} · {{ animal.breed }}{% endif %}
+            </p>
+        </div>
+
+        <span class="badge text-bg-success mt-2">
+            Individual Monitoring
+        </span>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Simulation mode:</strong>
+        Sensor values are generated for software testing.
+        They are not validated veterinary measurements.
+        The page refreshes every 15 seconds.
+    </div>
+
+    <!-- Animal information -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card panel shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-secondary small">Species</div>
+                    <h2 class="h5 mt-2">{{ animal.species }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card panel shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-secondary small">Health Status</div>
+                    <h2 class="h5 mt-2">{{ animal.health_status }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card panel shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-secondary small">Active Integrated Devices</div>
+                    <h2 class="h5 mt-2">{{ devices|length }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device information -->
+    <div class="card panel shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h5 fw-bold mb-3">Integrated IoT Device</h2>
+
+            {% for device in devices %}
+                <div class="border rounded p-3 mb-2">
+                    <div class="fw-semibold">{{ device.device_id }}</div>
+                    <div class="small text-secondary">
+                        Type: {{ device.get_device_type_display }}
+                    </div>
+                    <div class="small text-secondary">
+                        Last recorded update:
+                        {% if device.last_seen %}
+                            {{ device.last_seen|date:"d M Y, H:i:s" }}
+                        {% else %}
+                            Not recorded
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-secondary mb-0">
+                    No active integrated device is registered for this animal.
+                </p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Latest sensor values -->
+    <h2 class="h5 fw-bold mb-3">Latest Sensor Readings</h2>
+
+    <div class="row g-3 mb-4">
+        {% for reading in latest_readings %}
+            <div class="col-12 col-md-4">
+                <div class="card panel shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-secondary small">
+                            {{ reading.sensor_type|title }}
+                        </div>
+                        <div class="fs-3 fw-bold mt-2">
+                            {{ reading.value }}
+                            <span class="fs-6 text-secondary">
+                                {{ reading.unit }}
+                            </span>
+                        </div>
+                        <div class="small text-secondary mt-2">
+                            {{ reading.timestamp|date:"d M Y, H:i:s" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <p class="text-secondary">No sensor readings available yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Sensor charts -->
+    <h2 class="h5 fw-bold mb-3">Sensor Trends</h2>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-xl-4">
+            <div class="card panel shadow-sm">
+                <div class="card-body">
+                    <h3 class="h6">Activity Index</h3>
+                    <div class="chart-container">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <div class="card panel shadow-sm">
+                <div class="card-body">
+                    <h3 class="h6">Temperature (°C)</h3>
+                    <div class="chart-container">
+                        <canvas id="temperatureChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <div class="card panel shadow-sm">
+                <div class="card-body">
+                    <h3 class="h6">Heart Rate (BPM)</h3>
+                    <div class="chart-container">
+                        <canvas id="heartRateChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reading history -->
+    <div class="card panel shadow-sm">
+        <div class="card-body">
+            <h2 class="h5 fw-bold mb-3">Sensor Reading History</h2>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Device</th>
+                            <th>Sensor</th>
+                            <th>Value</th>
+                            <th>Unit</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reading in recent_readings %}
+                            <tr>
+                                <td>{{ reading.device.device_id }}</td>
+                                <td>{{ reading.sensor_type }}</td>
+                                <td>{{ reading.value }}</td>
+                                <td>{{ reading.unit }}</td>
+                                <td>{{ reading.timestamp|date:"d M Y, H:i:s" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-secondary">
+                                    No readings recorded yet.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+{{ chart_data_json|json_script:"animal-chart-data" }}
+
+<script>
+    const chartData = JSON.parse(
+        document.getElementById("animal-chart-data").textContent
+    );
+
+    function createSensorChart(canvasId, sensorType, label) {
+        const data = chartData[sensorType];
+        const canvas = document.getElementById(canvasId);
+
+        if (!canvas || !data) return;
+
+        new Chart(canvas, {
+            type: "line",
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: label,
+                    data: data.values,
+                    borderColor: "#2563eb",
+                    backgroundColor: "rgba(37, 99, 235, 0.12)",
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: "index"
+                },
+                scales: {
+                    x: {
+                        ticks: { maxTicksLimit: 6 }
+                    },
+                    y: {
+                        beginAtZero: sensorType === "activity"
+                    }
+                }
+            }
+        });
+    }
+
+    createSensorChart("activityChart", "activity", "Activity Index");
+    createSensorChart("temperatureChart", "temperature", "Temperature (°C)");
+    createSensorChart("heartRateChart", "heart_rate", "Heart Rate (BPM)");
+</script>
+
+</body>
+</html>
+
